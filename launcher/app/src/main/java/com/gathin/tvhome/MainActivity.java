@@ -256,6 +256,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         AnimatedPosters.attach(this, root);
         PrayerWidget.attach(this, root);
         AppMotionPreview.attach(this, root);
+        AuroraSuite.attach(this, root);
         // The tiles' entrance plays once per TV boot. Android reclaims the launcher during long stays
         // in big apps; starting again then is a return to Home, not a first launch.
         long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
