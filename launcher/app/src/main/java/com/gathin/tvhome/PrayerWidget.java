@@ -81,9 +81,9 @@ final class PrayerWidget {
         card.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         GradientDrawable background = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{0xC91B283D, 0xB80B1527});
-        background.setCornerRadius(dp(19));
-        background.setStroke(Math.max(1, dp(0.8f)), 0x69FFFFFF);
+                new int[]{0xAC1C3149, 0x9A0A172A});
+        background.setCornerRadius(dp(21));
+        background.setStroke(Math.max(1, dp(0.8f)), 0x5CFFFFFF);
         card.setBackground(background);
 
         LinearLayout stack = new LinearLayout(owner);
@@ -114,8 +114,8 @@ final class PrayerWidget {
         // Central glass tile: clear of the clock on the left and controls on the right.
         // Keeps its height modest so it does not overlay the animated hero poster.
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                dp(236), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        lp.topMargin = dp(22);
+                dp(252), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        lp.topMargin = dp(20);
         card.setElevation(0f);
         root.addView(card, lp);
 
@@ -169,6 +169,16 @@ final class PrayerWidget {
                 date.get(Calendar.YEAR), date.get(Calendar.MONTH) + 1);
     }
 
+    /**
+     * API v2 publishes the monthly list as "prayers". V1 and some older client
+     * examples use "prayerTime". Accept both without mixing their time formats.
+     */
+    private static JSONArray entries(JSONObject payload) {
+        if (payload == null) return null;
+        JSONArray result = payload.optJSONArray("prayers");
+        return result != null ? result : payload.optJSONArray("prayerTime");
+    }
+
     /** Monthly payload is valid only for the exact month requested. */
     private void readCache(Calendar today) {
         String key = monthString(today);
@@ -178,18 +188,18 @@ final class PrayerWidget {
         if (!key.equals(prefs.getString("month", ""))) return;
         try {
             JSONObject saved = new JSONObject(prefs.getString("data", ""));
-            JSONArray days = saved.optJSONArray("prayerTime");
+            JSONArray days = entries(saved);
             if (days != null && days.length() >= 1) monthly = saved;
         } catch (Exception ignored) { }
     }
 
     private JSONObject findDay(String isoDate) {
         if (monthly == null) return null;
-        JSONArray days = monthly.optJSONArray("prayerTime");
+        JSONArray days = entries(monthly);
         if (days == null) return null;
         for (int i = 0; i < days.length(); i++) {
             JSONObject day = days.optJSONObject(i);
-            if (day != null && isoDate.equals(day.optString("date"))) return day;
+            if (day != null && day.optString("date", "").startsWith(isoDate)) return day;
         }
         return null;
     }
@@ -219,7 +229,7 @@ final class PrayerWidget {
         if (selected == null) {
             name.setText(monthly == null ? "Jadual belum ada" : "Menunggu jadual");
             time.setText("--:--");
-            countdown.setText("SGR01  ·  Semak sambungan internet");
+            countdown.setText("SGR01  ·  Menunggu jadual waktu solat");
             return;
         }
         SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.US);
@@ -261,7 +271,7 @@ final class PrayerWidget {
                         }
                     }
                     JSONObject parsed = new JSONObject(result.toString());
-                    JSONArray days = parsed.optJSONArray("prayerTime");
+                    JSONArray days = entries(parsed);
                     if (days != null && days.length() > 0
                             && days.optJSONObject(0) != null
                             && days.optJSONObject(0).optLong("fajr", 0L) > 1_000_000_000L) {
