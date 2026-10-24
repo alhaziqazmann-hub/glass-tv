@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.Typeface;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,12 +17,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 
 /**
- * Glass TV Custom v2 — floating cinematic poster, aligned above the app dock.
+ * Glass TV Custom v3 — Liquid Glass hero preview and ambient lighting.
+ * Keeps the stable v2 focus selection and local video playback unchanged.
  * Maintains API AnimatedPosters.attach(this, root) used by MainActivity.java.
  * Playback uses local, muted H.264 MP4 files in app external files/posters/slotN.mp4.
  * Does not alter HOME routing, system apps, wallpaper config, or dock navigation.
@@ -33,6 +36,10 @@ final class AnimatedPosters {
     private final FrameLayout root;
     private final RecyclerView grid;
     private final FrameLayout card;
+    private final View halo;
+    private final View rim;
+    private final TextView appName;
+    private final TextView previewTag;
     private final TextureView video;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaPlayer player;
@@ -42,6 +49,9 @@ final class AnimatedPosters {
     private int playingSlot = -1;
     private int generation;
     private final Runnable delayedPlay = this::openRequested;
+    // Order corresponds to the user's first four dock tiles.
+    private static final String[] APP_NAMES = {"Disney+", "YouTube", "Netflix", "Nuvio"};
+    private static final int[] ACCENTS = {0xFF76B8FF, 0xFFFF556C, 0xFFEF4659, 0xFF9B83FF};
 
     static void attach(Activity activity, FrameLayout root) {
         if (root == null) {
@@ -57,15 +67,25 @@ final class AnimatedPosters {
         grid = owner.findViewById(R.id.grid);
         final float density = owner.getResources().getDisplayMetrics().density;
 
-        // A restrained, rounded panel. Android TV's existing dock remains untouched.
+        // Static gradients only: no shaky zoom, translation or shader-driven animations.
+        // The glow is beneath the video and ignores remote focus/touches.
+        halo = new View(owner);
+        halo.setFocusable(false);
+        halo.setClickable(false);
+        halo.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        halo.setVisibility(View.GONE);
+        halo.setAlpha(0f);
+
         card = new FrameLayout(owner);
         GradientDrawable chrome = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(19, 25, 46), Color.rgb(8, 12, 25)});
-        chrome.setCornerRadius(24f * density);
-        chrome.setStroke(Math.max(1, Math.round(density)), Color.argb(100, 255, 255, 255));
+                new int[]{Color.rgb(20, 25, 37), Color.rgb(8, 12, 22)});
+        chrome.setCornerRadius(22f * density);
+        chrome.setStroke(Math.max(1, Math.round(1.3f * density)), 0x99FFFFFF);
         card.setBackground(chrome);
         card.setClipToOutline(true);
+        card.setFocusable(false);
+        card.setClickable(false);
         card.setElevation(0f);
         card.setVisibility(View.GONE);
         card.setAlpha(0f);
@@ -110,9 +130,65 @@ final class AnimatedPosters {
         card.addView(video, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // index 0 remains above the wallpaper inserted later by Glass TV,
-        // but below its clock, highlight, settings, and app tiles.
-        root.addView(card, 0, new FrameLayout.LayoutParams(1, 1, Gravity.TOP | Gravity.END));
+        // Bottom glass tint makes the caption legible across all four video colours.
+        View lowerTint = new View(owner);
+        GradientDrawable shade = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0x00101524, 0xCC0C1423});
+        lowerTint.setBackground(shade);
+        lowerTint.setFocusable(false);
+        card.addView(lowerTint, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(78), Gravity.BOTTOM));
+
+        appName = new TextView(owner);
+        appName.setTextColor(0xF9FFFFFF);
+        appName.setTextSize(20f);
+        appName.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        appName.setLetterSpacing(0.015f);
+        appName.setSingleLine(true);
+        appName.setFocusable(false);
+        FrameLayout.LayoutParams nameLp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.START);
+        nameLp.leftMargin = dp(20);
+        nameLp.bottomMargin = dp(18);
+        card.addView(appName, nameLp);
+
+        previewTag = new TextView(owner);
+        previewTag.setText("GLASS TV  /  MOTION PREVIEW");
+        previewTag.setTextSize(9f);
+        previewTag.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        previewTag.setLetterSpacing(0.11f);
+        previewTag.setTextColor(0xE0FFFFFF);
+        previewTag.setPadding(dp(12), dp(7), dp(12), dp(7));
+        GradientDrawable tagBg = new GradientDrawable();
+        tagBg.setColor(0x9920293D);
+        tagBg.setCornerRadius(dp(13));
+        tagBg.setStroke(Math.max(1, dp(0.6f)), 0x50FFFFFF);
+        previewTag.setBackground(tagBg);
+        previewTag.setFocusable(false);
+        FrameLayout.LayoutParams tagLp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.START);
+        tagLp.leftMargin = dp(17);
+        tagLp.topMargin = dp(16);
+        card.addView(previewTag, tagLp);
+
+        // The inner light rim floats over the moving video but never steals focus.
+        rim = new View(owner);
+        GradientDrawable rimChrome = new GradientDrawable();
+        rimChrome.setColor(Color.TRANSPARENT);
+        rimChrome.setCornerRadius(dp(21));
+        rimChrome.setStroke(Math.max(1, dp(0.7f)), 0xA0FFFFFF);
+        rim.setBackground(rimChrome);
+        rim.setFocusable(false);
+        rim.setClickable(false);
+        card.addView(rim, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // Both layers remain under the real controls: clock, app dock, settings.
+        root.addView(halo, 0, new FrameLayout.LayoutParams(1, 1, Gravity.TOP | Gravity.END));
+        root.addView(card, 1, new FrameLayout.LayoutParams(1, 1, Gravity.TOP | Gravity.END));
 
         // Dock position is measured from actual tile locations, not fixed dp guesses.
         // This prevents the hero preview from covering the apps row on different TVs.
@@ -191,6 +267,31 @@ final class AnimatedPosters {
         params.topMargin = top;
         params.rightMargin = sideGap;
         card.setLayoutParams(params);
+        // Give the static halo a few pixels beyond the hero; it never crosses the dock.
+        int haloPad = Math.min(dp(14), Math.max(0, (dockTop - (top + previewH)) / 2));
+        FrameLayout.LayoutParams haloParams = new FrameLayout.LayoutParams(
+                previewW + haloPad * 2, previewH + haloPad * 2,
+                Gravity.TOP | Gravity.END);
+        haloParams.topMargin = Math.max(0, top - haloPad);
+        haloParams.rightMargin = Math.max(0, sideGap - haloPad);
+        halo.setLayoutParams(haloParams);
+    }
+
+    private void applyAccent(int slot) {
+        if (slot < 1 || slot > APP_NAMES.length) return;
+        int accent = ACCENTS[slot - 1];
+        appName.setText(APP_NAMES[slot - 1]);
+        int a = Color.red(accent), b = Color.green(accent), c = Color.blue(accent);
+        GradientDrawable aura = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.argb(112, a, b, c), Color.argb(24, a, b, c), Color.TRANSPARENT});
+        aura.setCornerRadius(dp(32));
+        halo.setBackground(aura);
+        GradientDrawable outline = new GradientDrawable();
+        outline.setColor(Color.TRANSPARENT);
+        outline.setCornerRadius(dp(21));
+        outline.setStroke(Math.max(1, dp(0.8f)), Color.argb(210, a, b, c));
+        rim.setBackground(outline);
     }
 
     private File fileFor(int slot) {
@@ -200,8 +301,11 @@ final class AnimatedPosters {
 
     private void hideCard() {
         card.animate().cancel();
+        halo.animate().cancel();
         card.setAlpha(0f);
+        halo.setAlpha(0f);
         card.setVisibility(View.GONE);
+        halo.setVisibility(View.GONE);
     }
 
     private void changeSlot(int slot) {
@@ -227,8 +331,12 @@ final class AnimatedPosters {
         if (player != null && playingSlot == requestedSlot) return;
         releasePlayer();
         positionCard();
+        applyAccent(requestedSlot);
         card.animate().cancel();
+        halo.animate().cancel();
         card.setAlpha(0f);
+        halo.setAlpha(0f);
+        halo.setVisibility(View.VISIBLE);
         card.setVisibility(View.VISIBLE);
         if (!surfaceReady || video.getSurfaceTexture() == null) return;
 
@@ -247,7 +355,8 @@ final class AnimatedPosters {
                 if (generation != token || mp != player || !foreground) return;
                 try {
                     mp.start();
-                    card.animate().alpha(1f).setDuration(280).start();
+                    card.animate().alpha(1f).setDuration(240).start();
+                    halo.animate().alpha(0.72f).setDuration(380).start();
                 } catch (RuntimeException ex) {
                     fail(ex);
                 }
