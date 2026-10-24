@@ -194,16 +194,30 @@ final class PrayerWidget {
     }
 
     private JSONObject findDay(String isoDate) {
-        if (monthly == null) return null;
-        JSONArray days = entries(monthly);
-        if (days == null) return null;
-        for (int i = 0; i < days.length(); i++) {
-            JSONObject day = days.optJSONObject(i);
-            if (day != null && day.optString("date", "").startsWith(isoDate)) return day;
-        }
+    if (monthly == null) return null;
+    JSONArray days = entries(monthly);
+    if (days == null) return null;
+
+    int dayNumber;
+    try {
+        dayNumber = Integer.parseInt(
+                isoDate.substring(8, 10));
+    } catch (Exception error) {
         return null;
     }
 
+    for (int i = 0; i < days.length(); i++) {
+        JSONObject day = days.optJSONObject(i);
+        if (day == null) continue;
+
+        if (day.optInt("day", -1) == dayNumber
+                || day.optString("date", "")
+                        .startsWith(isoDate)) {
+            return day;
+        }
+    }
+    return null;
+}
     private void render() {
         Calendar today = malaysiaNow();
         readCache(today);
