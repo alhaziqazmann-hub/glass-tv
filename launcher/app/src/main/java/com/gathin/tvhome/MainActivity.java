@@ -427,7 +427,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> GlassSettings.show(this));
         btnSettings.setOnLongClickListener(v -> {
             if (!moduleCards) return false;   // off: a long press does nothing, as before the feature
             showModuleCards();
