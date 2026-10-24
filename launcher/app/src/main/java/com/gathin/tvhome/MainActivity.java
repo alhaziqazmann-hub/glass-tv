@@ -99,7 +99,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** How much of the space between the side paddings the top shelf may use. */
     private static final float HERO_WIDTH_SHARE = 0.40f;
     /** The name is one line, and may run wider than the description, up to this share. */
-    private static final float HERO_NAME_WIDTH_SHARE = 0.60f;
+    private static final float HERO_NAME_WIDTH_SHARE = 0.40f;
     private static final float HERO_TITLE_MAX_SP = 40f;
     /** The breathing room between the shelf's last line and the top of the app container. */
     private static final float HERO_GAP_DP = 67f;
