@@ -7,11 +7,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.gathin.tvposter.v3'
+        applicationId 'com.gathin.tvposter.v31'
         minSdk 26
         targetSdk 34
-        versionCode 5
-        versionName '3.0-beta1'
+        versionCode 6
+        versionName '3.1-settings-beta1'
     }
 
     buildTypes {
